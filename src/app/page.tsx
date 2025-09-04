@@ -1,5 +1,6 @@
 import CodeInput from '@/components/CodeInput'
 import Footer from '@/components/Footer'
+import DomainDisplay from '@/components/DomainDisplay'
 
 export default function Home() {
   return (
@@ -15,9 +16,7 @@ export default function Home() {
               <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
                 快速创建和分享文本内容，支持自定义代码或随机生成代码访问
               </p>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 px-4">
-                通过 <code className="bg-slate-200 dark:bg-slate-700 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm break-all">{process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/代码</code> 格式快速访问您的剪切板
-              </p>
+              <DomainDisplay />
             </div>
 
             {/* 代码输入组件 */}
