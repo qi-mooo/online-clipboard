@@ -328,7 +328,7 @@ describe('ScheduledCleanup', () => {
       }
 
       // Check that the log messages contain properly formatted byte sizes
-      const logCalls = consoleSpy.log.mock.calls.filter(call => 
+      const logCalls = consoleSpy.log.mock.calls.filter((call: any) => 
         call[0].includes('手动清理完成')
       )
 

@@ -119,7 +119,7 @@ verify_database_connection() {
     log_info "Verifying database connection..."
     
     # 尝试连接数据库
-    if npx prisma db execute --stdin <<< "SELECT 1;" >/dev/null 2>&1; then
+    if echo "SELECT 1;" | npx prisma db execute --stdin >/dev/null 2>&1; then
         log_success "Database connection verified"
     else
         log_error "Database connection failed"
@@ -128,7 +128,7 @@ verify_database_connection() {
     
     # 检查表结构
     log_info "Checking database schema..."
-    if npx prisma db execute --stdin <<< "SELECT name FROM sqlite_master WHERE type='table';" >/dev/null 2>&1; then
+    if echo "SELECT name FROM sqlite_master WHERE type='table';" | npx prisma db execute --stdin >/dev/null 2>&1; then
         log_success "Database schema validated"
     else
         log_warning "Database schema validation failed"

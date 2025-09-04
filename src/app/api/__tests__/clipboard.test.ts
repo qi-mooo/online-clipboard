@@ -15,7 +15,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-const mockPrisma = vi.mocked(prisma)
+const mockPrisma = prisma as any
 
 describe('/api/clipboard/[code]', () => {
   beforeEach(() => {

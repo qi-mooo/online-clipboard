@@ -42,7 +42,7 @@ quick_check() {
 quick_build() {
     info "Building application..."
     npm ci --silent
-    npx prisma generate --silent
+    npx prisma generate
     npm run build --silent
     info "Build completed"
 }

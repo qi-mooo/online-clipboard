@@ -128,7 +128,7 @@ export function debounce<T extends (...args: any[]) => any>(
   debounced.cancel = cancel
   debounced.flush = flush
 
-  return debounced as T & { cancel: () => void; flush: () => void }
+  return debounced as unknown as T & { cancel: () => void; flush: () => void }
 }
 
 /**

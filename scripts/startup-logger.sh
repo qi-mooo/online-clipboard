@@ -236,7 +236,7 @@ cleanup_old_logs() {
 # 注意：Alpine sh 不支持 export -f，所以我们不导出函数
 
 # 如果直接运行此脚本
-if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+if [ "$(basename "$0")" = "startup-logger.sh" ]; then
     START_TIME=$(date +%s)
     
     # 清理旧日志

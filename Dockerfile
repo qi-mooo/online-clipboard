@@ -28,7 +28,8 @@ COPY --chown=nextjs:nodejs node_modules/@prisma ./node_modules/@prisma
 # 复制脚本文件
 COPY --chown=nextjs:nodejs scripts ./scripts
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh scripts/*.sh
+COPY --chown=nextjs:nodejs simple-start.sh ./
+RUN chmod +x docker-entrypoint.sh scripts/*.sh simple-start.sh
 
 # 切换到非 root 用户
 USER nextjs
@@ -49,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # 使用 dumb-init 启动应用以正确处理信号
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["./docker-entrypoint.sh"]
+CMD ["./simple-start.sh"]

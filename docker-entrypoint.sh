@@ -82,7 +82,7 @@ else
     npx prisma generate
     
     # 验证数据库连接
-    if npx prisma db execute --stdin <<< "SELECT 1;" > /dev/null 2>&1; then
+    if echo "SELECT 1;" | npx prisma db execute --stdin > /dev/null 2>&1; then
         log_with_timestamp "SUCCESS" "Database connection verified"
     else
         log_startup_error "Database connection failed"

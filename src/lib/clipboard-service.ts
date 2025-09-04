@@ -247,7 +247,7 @@ class ClipboardServiceImpl {
       const [count, aggregation] = await Promise.all([
         prisma.clipboard.count(),
         prisma.clipboard.aggregate({
-          _sum: {
+          _count: {
             content: true
           },
           _min: {
@@ -261,7 +261,7 @@ class ClipboardServiceImpl {
 
       return {
         totalClipboards: count,
-        totalContentSize: aggregation._sum.content || 0,
+        totalContentSize: aggregation._count.content || 0,
         oldestClipboard: aggregation._min.createdAt || undefined,
         newestClipboard: aggregation._max.createdAt || undefined
       }
@@ -354,4 +354,3 @@ export const clipboardService = new ClipboardServiceImpl()
 
 // 导出类型和类，以便测试时可以创建新实例
 export { ClipboardServiceImpl }
-export type { ClipboardServiceOptions }

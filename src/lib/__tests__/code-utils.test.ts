@@ -109,7 +109,14 @@ describe('code-utils', () => {
 
   describe('isCodeExists', () => {
     it('当代码存在时应该返回true', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ id: '1' })
+      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ 
+        id: '1',
+        content: 'test',
+        code: 'existing-code',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastAccessed: new Date()
+      })
       
       const result = await isCodeExists('existing-code')
       expect(result).toBe(true)
@@ -146,7 +153,14 @@ describe('code-utils', () => {
 
     it('应该在代码冲突时重试', async () => {
       vi.mocked(db.clipboard.findUnique)
-        .mockResolvedValueOnce({ id: '1' }) // 第一次冲突
+        .mockResolvedValueOnce({ 
+          id: '1',
+          content: 'test',
+          code: 'test-code',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessed: new Date()
+        }) // 第一次冲突
         .mockResolvedValueOnce(null) // 第二次成功
       
       const code = await generateUniqueCode()
@@ -155,7 +169,14 @@ describe('code-utils', () => {
     })
 
     it('应该在达到最大重试次数后使用时间戳确保唯一性', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ id: '1' })
+      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ 
+        id: '1',
+        content: 'test',
+        code: 'test-code',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastAccessed: new Date()
+      })
       
       const code = await generateUniqueCode(2)
       expect(code).toBeDefined()

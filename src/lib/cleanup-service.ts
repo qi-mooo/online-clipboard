@@ -94,11 +94,11 @@ class CleanupServiceImpl {
     maxAgeDays: number, 
     batchSize: number, 
     dryRun: boolean
-  ): Promise<Omit<CleanupResult, 'totalProcessed' | 'dryRun'>> {
+  ): Promise<Pick<CleanupResult, 'deletedCount' | 'freedSpace' | 'errors'>> {
     const result = {
       deletedCount: 0,
       freedSpace: 0,
-      errors: []
+      errors: [] as string[]
     }
 
     try {
@@ -150,11 +150,11 @@ class CleanupServiceImpl {
     maxTotalSize: number, 
     batchSize: number, 
     dryRun: boolean
-  ): Promise<Omit<CleanupResult, 'totalProcessed' | 'dryRun'>> {
+  ): Promise<Pick<CleanupResult, 'deletedCount' | 'freedSpace' | 'errors'>> {
     const result = {
       deletedCount: 0,
       freedSpace: 0,
-      errors: []
+      errors: [] as string[]
     }
 
     try {
@@ -213,11 +213,11 @@ class CleanupServiceImpl {
     maxCount: number, 
     batchSize: number, 
     dryRun: boolean
-  ): Promise<Omit<CleanupResult, 'totalProcessed' | 'dryRun'>> {
+  ): Promise<Pick<CleanupResult, 'deletedCount' | 'freedSpace' | 'errors'>> {
     const result = {
       deletedCount: 0,
       freedSpace: 0,
-      errors: []
+      errors: [] as string[]
     }
 
     try {

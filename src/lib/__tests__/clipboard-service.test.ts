@@ -435,7 +435,7 @@ describe('ClipboardService', () => {
       const mockResult = { success: true }
       const mockOperation = vi.fn().mockResolvedValue(mockResult)
       
-      mockPrisma.$transaction.mockImplementation((fn) => fn(mockPrisma))
+      mockPrisma.$transaction.mockImplementation((fn: any) => fn(mockPrisma))
 
       const result = await service.transaction(mockOperation)
 
