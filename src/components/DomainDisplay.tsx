@@ -8,26 +8,29 @@ export default function DomainDisplay() {
 
   useEffect(() => {
     setIsMounted(true)
-    
+
     if (typeof window !== 'undefined') {
-      // 在开发环境中，优先使用当前域名以保持一致性
-      // 在生产环境中，使用环境变量或当前域名
       const envDomain = process.env.NEXT_PUBLIC_DOMAIN
       const currentHost = window.location.host
-      
-      // 如果是生产环境且有配置的域名，使用配置的域名
-      // 否则使用当前访问的域名，确保与实际访问地址一致
-      if (envDomain && process.env.NODE_ENV === 'production') {
-        setDomain(envDomain)
-      } else {
-        setDomain(currentHost)
-      }
+      const nodeEnv = process.env.NODE_ENV
+
+      // 调试信息
+      console.log('DomainDisplay Debug:', {
+        envDomain,
+        currentHost,
+        nodeEnv,
+        hasEnvDomain: !!envDomain,
+        isProduction: nodeEnv === 'production'
+      })
+
+      // 直接使用当前访问的域名，确保一致性
+      setDomain(currentHost)
     }
   }, [])
 
   // 在服务端渲染时显示环境变量或占位符
-  const displayDomain = isMounted 
-    ? domain 
+  const displayDomain = isMounted
+    ? domain
     : (process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000')
 
   return (
