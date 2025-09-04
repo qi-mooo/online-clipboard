@@ -1,21 +1,17 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GET, POST, PUT } from '../clipboard/[code]/route'
 import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/db'
 
-// Mock Prisma
-vi.mock('@/lib/db', () => ({
-  prisma: {
-    clipboard: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      upsert: vi.fn(),
-    },
+// Mock the optimized clipboard service
+vi.mock('@/lib/optimized-clipboard-service', () => ({
+  optimizedClipboardService: {
+    getOrCreateClipboard: vi.fn(),
+    upsertClipboard: vi.fn(),
   },
 }))
 
-const mockPrisma = prisma as any
+import { optimizedClipboardService } from '@/lib/optimized-clipboard-service'
+const mockService = optimizedClipboardService as any
 
 describe('/api/clipboard/[code]', () => {
   beforeEach(() => {
@@ -37,10 +33,7 @@ describe('/api/clipboard/[code]', () => {
         lastAccessed: new Date(),
       }
 
-      const updatedClipboard = { ...mockClipboard, lastAccessed: new Date() }
-
-      mockPrisma.clipboard.findUnique.mockResolvedValue(mockClipboard)
-      mockPrisma.clipboard.update.mockResolvedValue(updatedClipboard)
+      mockService.getOrCreateClipboard.mockResolvedValue(mockClipboard)
 
       const request = new NextRequest('http://localhost/api/clipboard/test123')
       const response = await GET(request, { params: { code: 'test123' } })
@@ -49,13 +42,7 @@ describe('/api/clipboard/[code]', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.data.code).toBe('test123')
-      expect(mockPrisma.clipboard.findUnique).toHaveBeenCalledWith({
-        where: { code: 'test123' }
-      })
-      expect(mockPrisma.clipboard.update).toHaveBeenCalledWith({
-        where: { code: 'test123' },
-        data: { lastAccessed: expect.any(Date) }
-      })
+      expect(mockService.getOrCreateClipboard).toHaveBeenCalledWith('test123')
     })
 
     it('should create new clipboard if not exists', async () => {
@@ -68,8 +55,7 @@ describe('/api/clipboard/[code]', () => {
         lastAccessed: new Date(),
       }
 
-      mockPrisma.clipboard.findUnique.mockResolvedValue(null)
-      mockPrisma.clipboard.create.mockResolvedValue(newClipboard)
+      mockService.getOrCreateClipboard.mockResolvedValue(newClipboard)
 
       const request = new NextRequest('http://localhost/api/clipboard/newcode')
       const response = await GET(request, { params: { code: 'newcode' } })
@@ -79,13 +65,7 @@ describe('/api/clipboard/[code]', () => {
       expect(data.success).toBe(true)
       expect(data.data.code).toBe('newcode')
       expect(data.data.content).toBe('')
-      expect(mockPrisma.clipboard.create).toHaveBeenCalledWith({
-        data: {
-          code: 'newcode',
-          content: '',
-          lastAccessed: expect.any(Date)
-        }
-      })
+      expect(mockService.getOrCreateClipboard).toHaveBeenCalledWith('newcode')
     })
 
     it('should return 400 for invalid code', async () => {
@@ -99,7 +79,7 @@ describe('/api/clipboard/[code]', () => {
     })
 
     it('should handle database errors', async () => {
-      mockPrisma.clipboard.findUnique.mockRejectedValue(new Error('Database error'))
+      mockService.getOrCreateClipboard.mockRejectedValue(new Error('Database error'))
 
       const request = new NextRequest('http://localhost/api/clipboard/test123')
       const response = await GET(request, { params: { code: 'test123' } })
@@ -122,7 +102,7 @@ describe('/api/clipboard/[code]', () => {
         lastAccessed: new Date(),
       }
 
-      mockPrisma.clipboard.upsert.mockResolvedValue(newClipboard)
+      mockService.upsertClipboard.mockResolvedValue(newClipboard)
 
       const request = new NextRequest('http://localhost/api/clipboard/test456', {
         method: 'POST',
@@ -136,17 +116,9 @@ describe('/api/clipboard/[code]', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.data.content).toBe('New content')
-      expect(mockPrisma.clipboard.upsert).toHaveBeenCalledWith({
-        where: { code: 'test456' },
-        update: {
-          content: 'New content',
-          lastAccessed: expect.any(Date)
-        },
-        create: {
-          code: 'test456',
-          content: 'New content',
-          lastAccessed: expect.any(Date)
-        }
+      expect(mockService.upsertClipboard).toHaveBeenCalledWith({
+        code: 'test456',
+        content: 'New content'
       })
     })
 
@@ -194,7 +166,7 @@ describe('/api/clipboard/[code]', () => {
         lastAccessed: new Date(),
       }
 
-      mockPrisma.clipboard.upsert.mockResolvedValue(updatedClipboard)
+      mockService.upsertClipboard.mockResolvedValue(updatedClipboard)
 
       const request = new NextRequest('http://localhost/api/clipboard/test789', {
         method: 'PUT',
@@ -208,17 +180,9 @@ describe('/api/clipboard/[code]', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.data.content).toBe('Updated content')
-      expect(mockPrisma.clipboard.upsert).toHaveBeenCalledWith({
-        where: { code: 'test789' },
-        update: {
-          content: 'Updated content',
-          lastAccessed: expect.any(Date)
-        },
-        create: {
-          code: 'test789',
-          content: 'Updated content',
-          lastAccessed: expect.any(Date)
-        }
+      expect(mockService.upsertClipboard).toHaveBeenCalledWith({
+        code: 'test789',
+        content: 'Updated content'
       })
     })
 
@@ -232,7 +196,7 @@ describe('/api/clipboard/[code]', () => {
         lastAccessed: new Date(),
       }
 
-      mockPrisma.clipboard.upsert.mockResolvedValue(newClipboard)
+      mockService.upsertClipboard.mockResolvedValue(newClipboard)
 
       const request = new NextRequest('http://localhost/api/clipboard/nonexistent', {
         method: 'PUT',

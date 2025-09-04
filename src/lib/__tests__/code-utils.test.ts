@@ -7,16 +7,14 @@ import {
   sanitizeCode 
 } from '../code-utils'
 
-// Mock the database
-vi.mock('../db', () => ({
-  db: {
-    clipboard: {
-      findUnique: vi.fn()
-    }
+// Mock the optimized clipboard service
+vi.mock('../optimized-clipboard-service', () => ({
+  optimizedClipboardService: {
+    codeExists: vi.fn()
   }
 }))
 
-import { db } from '../db'
+import { optimizedClipboardService } from '../optimized-clipboard-service'
 
 describe('code-utils', () => {
   beforeEach(() => {
@@ -109,32 +107,22 @@ describe('code-utils', () => {
 
   describe('isCodeExists', () => {
     it('当代码存在时应该返回true', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ 
-        id: '1',
-        content: 'test',
-        code: 'existing-code',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastAccessed: new Date()
-      })
+      vi.mocked(optimizedClipboardService.codeExists).mockResolvedValue(true)
       
       const result = await isCodeExists('existing-code')
       expect(result).toBe(true)
-      expect(db.clipboard.findUnique).toHaveBeenCalledWith({
-        where: { code: 'existing-code' },
-        select: { id: true }
-      })
+      expect(optimizedClipboardService.codeExists).toHaveBeenCalledWith('existing-code')
     })
 
     it('当代码不存在时应该返回false', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue(null)
+      vi.mocked(optimizedClipboardService.codeExists).mockResolvedValue(false)
       
       const result = await isCodeExists('non-existing-code')
       expect(result).toBe(false)
     })
 
     it('当数据库查询出错时应该返回true（安全起见）', async () => {
-      vi.mocked(db.clipboard.findUnique).mockRejectedValue(new Error('Database error'))
+      vi.mocked(optimizedClipboardService.codeExists).mockRejectedValue(new Error('Database error'))
       
       const result = await isCodeExists('error-code')
       expect(result).toBe(true)
@@ -143,7 +131,7 @@ describe('code-utils', () => {
 
   describe('generateUniqueCode', () => {
     it('应该生成唯一代码', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue(null)
+      vi.mocked(optimizedClipboardService.codeExists).mockResolvedValue(false)
       
       const code = await generateUniqueCode()
       expect(code).toBeDefined()
@@ -152,36 +140,22 @@ describe('code-utils', () => {
     })
 
     it('应该在代码冲突时重试', async () => {
-      vi.mocked(db.clipboard.findUnique)
-        .mockResolvedValueOnce({ 
-          id: '1',
-          content: 'test',
-          code: 'test-code',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastAccessed: new Date()
-        }) // 第一次冲突
-        .mockResolvedValueOnce(null) // 第二次成功
+      vi.mocked(optimizedClipboardService.codeExists)
+        .mockResolvedValueOnce(true) // 第一次冲突
+        .mockResolvedValueOnce(false) // 第二次成功
       
       const code = await generateUniqueCode()
       expect(code).toBeDefined()
-      expect(db.clipboard.findUnique).toHaveBeenCalledTimes(2)
+      expect(optimizedClipboardService.codeExists).toHaveBeenCalledTimes(2)
     })
 
     it('应该在达到最大重试次数后使用时间戳确保唯一性', async () => {
-      vi.mocked(db.clipboard.findUnique).mockResolvedValue({ 
-        id: '1',
-        content: 'test',
-        code: 'test-code',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastAccessed: new Date()
-      })
+      vi.mocked(optimizedClipboardService.codeExists).mockResolvedValue(true)
       
       const code = await generateUniqueCode(2)
       expect(code).toBeDefined()
       expect(code.length).toBeGreaterThan(8) // 包含时间戳的代码会更长
-      expect(db.clipboard.findUnique).toHaveBeenCalledTimes(2)
+      expect(optimizedClipboardService.codeExists).toHaveBeenCalledTimes(2)
     })
   })
 

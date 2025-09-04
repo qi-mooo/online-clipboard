@@ -247,7 +247,7 @@ class ClipboardServiceImpl {
       const [count, aggregation] = await Promise.all([
         prisma.clipboard.count(),
         prisma.clipboard.aggregate({
-          _count: {
+          _sum: {
             content: true
           },
           _min: {
@@ -261,7 +261,7 @@ class ClipboardServiceImpl {
 
       return {
         totalClipboards: count,
-        totalContentSize: aggregation._count.content || 0,
+        totalContentSize: aggregation._sum.content || 0,
         oldestClipboard: aggregation._min.createdAt || undefined,
         newestClipboard: aggregation._max.createdAt || undefined
       }
