@@ -29,6 +29,8 @@ const ContentStats = memo(({ stats }: { stats: { characters: number; lines: numb
   </div>
 ))
 
+ContentStats.displayName = 'ContentStats'
+
 export default function TextEditor({
   code,
   initialContent = '',
@@ -171,8 +173,10 @@ export default function TextEditor({
     return () => {
       debouncedSave.cancel()
       throttledUpdateStats.cancel()
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const currentTimeout = autoSaveTimeoutRef.current
+      if (currentTimeout) {
+        clearTimeout(currentTimeout)
       }
     }
   }, [debouncedSave, throttledUpdateStats])
