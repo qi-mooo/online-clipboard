@@ -315,19 +315,27 @@ describe('ClipboardService', () => {
   describe('getStats', () => {
     it('should return clipboard statistics', async () => {
       const mockStats = {
-        _sum: { content: 1000 },
         _min: { createdAt: new Date('2024-01-01') },
         _max: { createdAt: new Date('2024-01-31') }
       }
 
+      const mockClipboards = [
+        { content: 'Hello World' }, // 11 characters
+        { content: 'Test content' }, // 12 characters  
+        { content: 'Another test' }, // 12 characters
+        { content: '' }, // 0 characters
+        { content: 'Final test content' } // 18 characters
+      ]
+
       mockPrisma.clipboard.count.mockResolvedValue(5)
       mockPrisma.clipboard.aggregate.mockResolvedValue(mockStats)
+      mockPrisma.clipboard.findMany.mockResolvedValue(mockClipboards)
 
       const result = await service.getStats()
 
       expect(result).toEqual({
         totalClipboards: 5,
-        totalContentSize: 1000,
+        totalContentSize: 53, // 11 + 12 + 12 + 0 + 18 = 53
         oldestClipboard: new Date('2024-01-01'),
         newestClipboard: new Date('2024-01-31')
       })

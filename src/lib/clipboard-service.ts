@@ -244,24 +244,31 @@ class ClipboardServiceImpl {
     newestClipboard?: Date
   }> {
     try {
-      const [count, aggregation] = await Promise.all([
+      const [count, aggregation, allClipboards] = await Promise.all([
         prisma.clipboard.count(),
         prisma.clipboard.aggregate({
-          _sum: {
-            content: true
-          },
           _min: {
             createdAt: true
           },
           _max: {
             createdAt: true
           }
+        }),
+        prisma.clipboard.findMany({
+          select: {
+            content: true
+          }
         })
       ])
 
+      // Calculate total content size by summing the length of all content strings
+      const totalContentSize = allClipboards.reduce((sum, clipboard) => {
+        return sum + (clipboard.content?.length || 0)
+      }, 0)
+
       return {
         totalClipboards: count,
-        totalContentSize: aggregation._sum.content || 0,
+        totalContentSize,
         oldestClipboard: aggregation._min.createdAt || undefined,
         newestClipboard: aggregation._max.createdAt || undefined
       }
