@@ -8,7 +8,6 @@ import { InlineLoadingState } from '@/components/LoadingState'
 const TextEditor = lazy(() => import('./TextEditor'))
 
 interface LazyTextEditorProps {
-  code: string
   initialContent?: string
   onSave: (content: string) => Promise<void>
   autoSave?: boolean

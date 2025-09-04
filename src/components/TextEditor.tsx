@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { validateContent, getContentStats } from '@/lib/content-utils'
 
 interface TextEditorProps {
-  code: string
   initialContent?: string
   onSave: (content: string) => Promise<void>
   autoSave?: boolean
@@ -18,7 +17,15 @@ interface TextEditorProps {
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 // Memoized content stats component to prevent unnecessary re-renders
-const ContentStats = memo(({ stats }: { stats: { characters: number; lines: number; words: number } }) => (
+const ContentStats = memo(({ stats }: { 
+  stats: { 
+    length: number; 
+    lines: number; 
+    words: number; 
+    characters: number; 
+    charactersNoSpaces: number; 
+  } 
+}) => (
   <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
     <span>字符: {stats.characters.toLocaleString()}</span>
     <span>行数: {stats.lines.toLocaleString()}</span>
@@ -32,17 +39,18 @@ const ContentStats = memo(({ stats }: { stats: { characters: number; lines: numb
 ContentStats.displayName = 'ContentStats'
 
 export default function TextEditor({
-  code,
   initialContent = '',
   onSave,
-  autoSave = process.env.NEXT_PUBLIC_AUTO_SAVE_ENABLED !== 'false',
-  autoSaveDelay = parseInt(process.env.NEXT_PUBLIC_AUTO_SAVE_DELAY || '1000', 10)
+  autoSave = true, // 默认启用自动保存，避免环境变量导致的水合问题
+  autoSaveDelay = 500 // 默认500ms延迟
 }: TextEditorProps) {
   const [content, setContent] = useState(initialContent)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [contentStats, setContentStats] = useState(getContentStats(initialContent))
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -62,26 +70,36 @@ export default function TextEditor({
     })
   }, [])
 
-  // 保存内容的函数
-  const saveContent = useCallback(async (contentToSave: string) => {
+  // 保存内容的函数 - 静默保存版本
+  const saveContent = useCallback(async (contentToSave: string, isManualSave = false) => {
     if (contentToSave === lastSavedContentRef.current) {
       return // 内容没有变化，不需要保存
     }
 
     try {
-      setSaveStatus('saving')
+      // 只有手动保存时才显示保存状态
+      if (isManualSave) {
+        setSaveStatus('saving')
+      }
       setSaveError(null)
       
       await onSave(contentToSave)
       
-      setSaveStatus('saved')
+      // 静默更新保存状态，不显示"已保存"提示
+      if (isManualSave) {
+        setSaveStatus('saved')
+        // 手动保存成功后短暂显示成功状态
+        setTimeout(() => {
+          setSaveStatus('idle')
+        }, 1500)
+      } else {
+        // 自动保存成功后直接设为idle，不显示任何提示
+        setSaveStatus('idle')
+      }
+      
       setHasUnsavedChanges(false)
       lastSavedContentRef.current = contentToSave
       
-      // 2秒后重置保存状态
-      setTimeout(() => {
-        setSaveStatus('idle')
-      }, 2000)
     } catch (error) {
       console.error('保存失败:', error)
       setSaveStatus('error')
@@ -90,10 +108,10 @@ export default function TextEditor({
     }
   }, [onSave])
 
-  // 优化的防抖保存函数
+  // 优化的防抖保存函数 - 自动保存
   const debouncedSave = useMemo(() => {
     return debounce((contentToSave: string) => {
-      saveContent(contentToSave)
+      saveContent(contentToSave, false) // 自动保存，不显示状态
     }, autoSaveDelay, {
       leading: false,
       trailing: true,
@@ -104,8 +122,17 @@ export default function TextEditor({
   // 节流的内容统计更新 - 减少更新频率
   const throttledUpdateStats = useMemo(() => {
     return throttle((text: string) => {
-      setContentStats(getContentStats(text))
-    }, 300) // 每300ms最多更新一次，减少闪烁
+      const newStats = getContentStats(text)
+      setContentStats(prevStats => {
+        // 只有统计数据真正变化时才更新
+        if (prevStats.characters !== newStats.characters || 
+            prevStats.lines !== newStats.lines || 
+            prevStats.words !== newStats.words) {
+          return newStats
+        }
+        return prevStats
+      })
+    }, 500) // 增加到500ms，进一步减少更新频率
   }, [])
 
   // 处理内容变化
@@ -113,14 +140,21 @@ export default function TextEditor({
     const newContent = e.target.value
     setContent(newContent)
     
-    // 延迟更新统计信息，避免输入时闪烁
+    // 检查是否有变化
     const hasChanges = newContent !== lastSavedContentRef.current
-    setHasUnsavedChanges(hasChanges)
     
-    // 只在停止输入后更新统计信息
+    // 只有变化状态真正改变时才更新
+    setHasUnsavedChanges(prevHasChanges => {
+      if (prevHasChanges !== hasChanges) {
+        return hasChanges
+      }
+      return prevHasChanges
+    })
+    
+    // 延迟更新统计信息，避免输入时闪烁
     throttledUpdateStats(newContent)
     
-    // 如果启用自动保存，则触发防抖保存
+    // 如果启用自动保存且有变化，则触发防抖保存
     if (autoSave && hasChanges) {
       debouncedSave(newContent)
     }
@@ -130,7 +164,7 @@ export default function TextEditor({
   const handleManualSave = useCallback(() => {
     // 取消防抖保存并立即保存
     debouncedSave.cancel()
-    saveContent(content)
+    saveContent(content, true) // 手动保存，显示状态
   }, [content, debouncedSave, saveContent])
 
   // 处理快捷键
@@ -158,15 +192,35 @@ export default function TextEditor({
     }
   }
 
-  // 初始化内容
+  // 初始化内容 - 优化逻辑，确保内容立即显示
   useEffect(() => {
-    if (initialContent !== content) {
+    if (!isInitialized) {
+      // 首次初始化
       setContent(initialContent)
       updateContentStats(initialContent)
       lastSavedContentRef.current = initialContent
       setHasUnsavedChanges(false)
+      setIsInitialized(true)
+    } else if (initialContent !== lastSavedContentRef.current) {
+      // 后续更新：只有当服务器返回的内容与本地保存的内容不同时才更新
+      // 这避免了用户正在编辑时被服务器数据覆盖
+      const currentHasChanges = content !== lastSavedContentRef.current
+      if (!currentHasChanges) {
+        // 只有在没有未保存更改时才更新内容
+        setContent(initialContent)
+        updateContentStats(initialContent)
+        lastSavedContentRef.current = initialContent
+        setHasUnsavedChanges(false)
+      }
     }
-  }, [initialContent, content, updateContentStats])
+  }, [initialContent, content, updateContentStats, isInitialized])
+
+  // 客户端挂载检查
+  useEffect(() => {
+    setIsMounted(true)
+    // 在客户端挂载后初始化统计信息，避免水合错误
+    setContentStats(getContentStats(initialContent))
+  }, [initialContent])
 
   // 清理防抖和节流函数
   useEffect(() => {
@@ -184,7 +238,7 @@ export default function TextEditor({
   // 验证内容
   const validation = validateContent(content)
 
-  // 获取保存状态指示器
+  // 获取保存状态指示器 - 简化版本，减少闪烁
   const getSaveStatusIndicator = () => {
     switch (saveStatus) {
       case 'saving':
@@ -213,12 +267,8 @@ export default function TextEditor({
           </div>
         )
       default:
-        return hasUnsavedChanges ? (
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-            <div className="w-2 h-2 bg-amber-600 dark:bg-amber-400 rounded-full"></div>
-            <span className="text-sm">有未保存的更改</span>
-          </div>
-        ) : null
+        // 不显示"有未保存的更改"状态，保持界面简洁
+        return null
     }
   }
 
@@ -313,8 +363,11 @@ export default function TextEditor({
             <Button
               onClick={async () => {
                 try {
-                  await navigator.clipboard.writeText(content)
-                  // 可以添加复制成功的提示
+                  // 检查是否在客户端环境且已挂载
+                  if (isMounted && typeof window !== 'undefined' && navigator.clipboard) {
+                    await navigator.clipboard.writeText(content)
+                    // 可以添加复制成功的提示
+                  }
                 } catch (err) {
                   console.error('复制失败:', err)
                 }
@@ -327,13 +380,23 @@ export default function TextEditor({
             </Button>
             
             <Button
-              onClick={() => {
-                if (window.confirm('确定要清空所有内容吗？')) {
-                  setContent('')
-                  updateContentStats('')
+              onClick={async () => {
+                // 检查是否在客户端环境且已挂载
+                if (isMounted && typeof window !== 'undefined' && window.confirm('确定要清空所有内容吗？')) {
+                  const emptyContent = ''
+                  setContent(emptyContent)
+                  updateContentStats(emptyContent)
                   setHasUnsavedChanges(true)
-                  if (autoSave) {
-                    debouncedSave('')
+                  
+                  // 立即保存空内容
+                  try {
+                    if (autoSave) {
+                      // 取消防抖保存，立即保存
+                      debouncedSave.cancel()
+                      await saveContent(emptyContent, false)
+                    }
+                  } catch (error) {
+                    console.error('清空保存失败:', error)
                   }
                 }
               }}
@@ -346,10 +409,10 @@ export default function TextEditor({
           </div>
         </div>
         
-        {/* 自动保存设置提示 */}
+        {/* 自动保存设置提示 - 简化版本 */}
         {autoSave && (
           <div className="text-xs text-slate-500 dark:text-slate-400 text-center px-2">
-            自动保存已启用，更改将在 {autoSaveDelay / 1000} 秒后自动保存
+            自动保存已启用
           </div>
         )}
       </CardContent>

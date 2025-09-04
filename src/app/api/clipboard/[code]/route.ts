@@ -62,7 +62,7 @@ export async function POST(
       maxLength: 50
     })
 
-    // 验证内容参数
+    // 验证内容参数 - POST方法仍然要求非空内容
     const validatedContent = RequestValidator.validateString(body.content, '内容', {
       required: true
     })
@@ -111,13 +111,15 @@ export async function PUT(
       maxLength: 50
     })
 
-    // 验证内容参数
+    // 验证内容参数 - PUT方法允许空内容，支持清空功能
     const validatedContent = RequestValidator.validateString(body.content, '内容', {
-      required: true
+      required: false // 允许空内容
     })
 
-    // 检查内容长度限制
-    RequestValidator.validateContentSize(validatedContent)
+    // 检查内容长度限制（只有非空内容才检查）
+    if (validatedContent.length > 0) {
+      RequestValidator.validateContentSize(validatedContent)
+    }
 
     // 使用优化的服务更新剪切板
     const dbTimer = ApiLogger.startTimer()

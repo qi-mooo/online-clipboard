@@ -21,6 +21,7 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
   const { networkError, handleNetworkError, clearNetworkError } = useNetworkErrorHandler()
 
@@ -56,12 +57,17 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
     }
   }, [code, handleNetworkError, clearNetworkError])
 
+  // 客户端挂载检查
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // 页面加载时获取数据
   useEffect(() => {
     fetchClipboardData()
   }, [code, fetchClipboardData])
 
-  // 处理保存内容
+  // 处理保存内容 - 静默保存版本
   const handleSave = async (content: string) => {
     try {
       const response = await fetch(`/api/clipboard/${encodeURIComponent(code)}`, {
@@ -78,8 +84,16 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
         throw new Error(result.error || '保存失败')
       }
 
+      // 静默更新数据，不触发重新渲染编辑器
       if (result.data) {
-        setClipboardData(result.data)
+        setClipboardData(prevData => {
+          // 只有内容真正变化时才更新
+          if (!prevData || prevData.content !== result.data!.content || 
+              prevData.updatedAt !== result.data!.updatedAt) {
+            return result.data!
+          }
+          return prevData
+        })
       }
     } catch (err) {
       console.error('保存失败:', err)
@@ -90,10 +104,13 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
   // 复制链接到剪贴板
   const copyLink = async () => {
     try {
-      const url = `${window.location.origin}/${encodeURIComponent(code)}`
-      await navigator.clipboard.writeText(url)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
+      // 检查是否在客户端环境且已挂载
+      if (isMounted && typeof window !== 'undefined' && navigator.clipboard) {
+        const url = `${window.location.origin}/${encodeURIComponent(code)}`
+        await navigator.clipboard.writeText(url)
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      }
     } catch (err) {
       console.error('复制链接失败:', err)
       handleNetworkError(new Error('复制链接失败，请手动复制'), false)
@@ -201,7 +218,7 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
         {/* 文本编辑器 */}
         <div className="w-full">
           <LazyTextEditor
-            code={code}
+            key={`editor-${code}`} // 使用key确保编辑器正确初始化
             initialContent={clipboardData?.content || ''}
             onSave={handleSave}
           />
@@ -210,9 +227,9 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
         {/* 页面底部信息 */}
         <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 px-4">
           <p className="break-all">
-            通过 <code className="bg-slate-200 dark:bg-slate-700 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm">
-              {process.env.NEXT_PUBLIC_DOMAIN || 'localhost:3000'}/{code}
-            </code> 访问此剪切板
+            通过此链接访问剪切板: <code className="bg-slate-200 dark:bg-slate-700 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm">
+              {code}
+            </code>
           </p>
         </div>
         </div>
