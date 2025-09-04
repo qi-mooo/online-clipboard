@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  clipboard:
+    image: ghcr.io/qi-mooo/online-clipboard:latest
+    container_name: online-clipboard-prod
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=${PORT:-3000}
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-file:/app/data/clipboard.db}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_DOMAIN=${NEXT_PUBLIC_DOMAIN}
+      - NEXT_PUBLIC_AUTO_SAVE_DELAY=${NEXT_PUBLIC_AUTO_SAVE_DELAY:-1000}
+      - NEXT_PUBLIC_AUTO_SAVE_ENABLED=${NEXT_PUBLIC_AUTO_SAVE_ENABLED:-true}
+      - CLEANUP_INTERVAL_DAYS=${CLEANUP_INTERVAL_DAYS:-30}
+      - MAX_CONTENT_SIZE=${MAX_CONTENT_SIZE:-1048576}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_CLIPBOARDS=${MAX_CLIPBOARDS:-10000}
+      - CACHE_TTL=${CACHE_TTL:-3600}
+      - NEXT_PUBLIC_MAX_CONTENT_LENGTH=${NEXT_PUBLIC_MAX_CONTENT_LENGTH:-1048576}
+      - NEXT_PUBLIC_EDITOR_THEME=${NEXT_PUBLIC_EDITOR_THEME:-light}
+    volumes:
+      - clipboard-data:/app/data
+      - clipboard-logs:/app/logs
+      - clipboard-tmp:/app/tmp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - clipboard-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  clipboard-data:
+    driver: local
+  clipboard-logs:
+    driver: local
+  clipboard-tmp:
+    driver: local
+
+networks:
+  clipboard-network:
+    driver: bridge

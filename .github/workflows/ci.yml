@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Generate Prisma client
+      run: npx prisma generate
+
+    - name: Run linter
+      run: npm run lint
+
+    - name: Run type check
+      run: npm run type-check
+
+    - name: Run tests
+      run: npm run test
+
+    - name: Build application
+      run: npm run build
+
+  docker-test:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Generate Prisma client
+      run: npx prisma generate
+
+    - name: Build application
+      run: npm run build
+
+    - name: Build Docker image
+      run: docker build -t online-clipboard:test .
+
+    - name: Test Docker image
+      run: |
+        docker run -d --name test-container -p 3000:3000 online-clipboard:test
+        sleep 30
+        curl -f http://localhost:3000/api/health || exit 1
+        docker stop test-container
+        docker rm test-container
