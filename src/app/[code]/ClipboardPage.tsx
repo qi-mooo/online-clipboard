@@ -228,7 +228,10 @@ export default function ClipboardPage({ code }: ClipboardPageProps) {
         <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 px-4">
           <p className="break-all">
             通过此链接访问剪切板: <code className="bg-slate-200 dark:bg-slate-700 px-1.5 sm:px-2 py-1 rounded text-xs sm:text-sm">
-              {code}
+              {isMounted && typeof window !== 'undefined' 
+                ? `${window.location.origin}/${encodeURIComponent(code)}`
+                : code
+              }
             </code>
           </p>
         </div>
