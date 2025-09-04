@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   description: '简单易用的在线剪切板，支持自定义代码和随机代码，快速创建和分享文本内容',
   keywords: ['剪切板', '在线剪切板', '文本分享', '代码分享', 'clipboard'],
   authors: [{ name: 'Online Clipboard' }],
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
