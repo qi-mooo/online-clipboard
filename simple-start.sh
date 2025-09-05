@@ -10,11 +10,11 @@ mkdir -p /app/data
 
 # Run Prisma migrations
 echo "Running database migrations..."
-npx prisma migrate deploy
+./node_modules/.bin/prisma migrate deploy
 
 # Generate Prisma client
 echo "Generating Prisma client..."
-npx prisma generate
+./node_modules/.bin/prisma generate
 
 # Start the application
 echo "Starting Next.js server..."

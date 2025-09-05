@@ -1,4 +1,30 @@
-# 使用官方 Node.js 18 Alpine 镜像作为运行时基础镜像
+# 多阶段构建 - 构建阶段
+FROM node:18-alpine AS builder
+
+# 安装构建依赖
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# 复制 package 文件
+COPY package*.json ./
+
+# 安装依赖
+RUN npm ci
+
+# 复制 Prisma schema
+COPY prisma ./prisma
+
+# 生成 Prisma 客户端
+RUN npx prisma generate
+
+# 复制源代码
+COPY . .
+
+# 构建应用
+RUN npm run build
+
+# 生产阶段
 FROM node:18-alpine AS runner
 
 # 安装必要的系统依赖
@@ -15,15 +41,16 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p /app/data /app/logs /app/tmp && \
     chown -R nextjs:nodejs /app/data /app/logs /app/tmp
 
-# 复制本地构建的产物（需要先在本地运行 npm run build）
-COPY --chown=nextjs:nodejs .next/standalone ./
-COPY --chown=nextjs:nodejs .next/static ./.next/static
-COPY --chown=nextjs:nodejs public ./public
+# 从构建阶段复制构建产物
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 复制 Prisma 相关文件
-COPY --chown=nextjs:nodejs prisma ./prisma
-COPY --chown=nextjs:nodejs node_modules/.prisma ./node_modules/.prisma
-COPY --chown=nextjs:nodejs node_modules/@prisma ./node_modules/@prisma
+# 复制 Prisma 相关文件（从构建阶段）
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 
 # 复制脚本文件
 COPY --chown=nextjs:nodejs scripts ./scripts

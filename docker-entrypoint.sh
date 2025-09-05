@@ -71,18 +71,18 @@ else
     # 后备数据库初始化
     if [ ! -f "/app/data/clipboard.db" ]; then
         log_with_timestamp "INFO" "Database not found, creating new database"
-        npx prisma migrate deploy
+        ./node_modules/.bin/prisma migrate deploy
     else
         log_with_timestamp "INFO" "Database found, applying migrations"
-        npx prisma migrate deploy
+        ./node_modules/.bin/prisma migrate deploy
     fi
     
     # 生成 Prisma 客户端
     log_with_timestamp "INFO" "Generating Prisma client"
-    npx prisma generate
+    ./node_modules/.bin/prisma generate
     
     # 验证数据库连接
-    if echo "SELECT 1;" | npx prisma db execute --stdin > /dev/null 2>&1; then
+    if echo "SELECT 1;" | ./node_modules/.bin/prisma db execute --stdin > /dev/null 2>&1; then
         log_with_timestamp "SUCCESS" "Database connection verified"
     else
         log_startup_error "Database connection failed"
