@@ -46,12 +46,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 复制 Prisma 相关文件（从构建阶段）
+# 复制运行时需要的 node_modules（从构建阶段）
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# 复制 Prisma schema
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
 
 # 复制脚本文件
 COPY --chown=nextjs:nodejs scripts ./scripts
