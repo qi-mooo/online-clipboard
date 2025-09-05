@@ -4,8 +4,8 @@ import { lazy, Suspense } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { InlineLoadingState } from '@/components/LoadingState'
 
-// Lazy load the TextEditor component
-const TextEditor = lazy(() => import('./TextEditor'))
+// Lazy load the EnhancedTextEditor component
+const EnhancedTextEditor = lazy(() => import('./EnhancedTextEditor'))
 
 interface LazyTextEditorProps {
   initialContent?: string
@@ -51,7 +51,7 @@ function TextEditorSkeleton() {
 export default function LazyTextEditor(props: LazyTextEditorProps) {
   return (
     <Suspense fallback={<TextEditorSkeleton />}>
-      <TextEditor {...props} />
+      <EnhancedTextEditor {...props} />
     </Suspense>
   )
 }
