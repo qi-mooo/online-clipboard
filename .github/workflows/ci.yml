@@ -70,8 +70,37 @@ jobs:
 
     - name: Test Docker image
       run: |
+        # 启动容器
         docker run -d --name test-container -p 3000:3000 online-clipboard:test
-        sleep 30
-        curl -f http://localhost:3000/api/health || exit 1
+        
+        # 等待健康检查通过
+        timeout=300  # 5分钟超时
+        interval=10  # 每10秒检查一次
+        elapsed=0
+        
+        echo "Waiting for container to become healthy..."
+        while [ $elapsed -lt $timeout ]; do
+          if curl -f -s http://localhost:3000/api/health > /dev/null 2>&1; then
+            echo "✅ Container is healthy after ${elapsed}s"
+            echo "Health check response:"
+            curl -s http://localhost:3000/api/health
+            break
+          fi
+          
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ Container failed to become healthy after ${timeout}s"
+            echo "Container logs:"
+            docker logs test-container
+            docker stop test-container
+            docker rm test-container
+            exit 1
+          fi
+          
+          echo "⏳ Waiting... (${elapsed}s/${timeout}s)"
+          sleep $interval
+          elapsed=$((elapsed + interval))
+        done
+        
+        # 清理
         docker stop test-container
         docker rm test-container
